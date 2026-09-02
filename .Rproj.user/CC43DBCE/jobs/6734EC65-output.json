@@ -1,0 +1,8 @@
+[1,"=> shiny::runApp()\n\n"]
+[2,"Loading required package: shiny\r\n"]
+[2,"\r\nAttaching package: 'bslib'\r\n\r\nThe following object is masked from 'package:utils':\r\n\r\n    page\r\n\r\nLoading required package: sysfonts\r\nLoading required package: showtextdb\r\n"]
+[2,"\r\nAttaching package: 'zip'\r\n\r\nThe following objects are masked from 'package:utils':\r\n\r\n    unzip, zip\r\n\r\n"]
+[2,"\r\nListening on http://127.0.0.1:5773\r\n"]
+[2,"Warning in log(mmrm_out[[4]][[2]]) : NaNs produced\r\n"]
+[2,"\r\n\r\nExecution halted\r\n"]
+[1,"\nShiny application successfully stopped.\n\n"]

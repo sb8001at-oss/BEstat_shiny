@@ -233,9 +233,25 @@ mmrm_f <- function(pkparam, col_name, grouping, logarithm = TRUE){
       paste(col_name, "~ group + period + treatment")) |> as.formula()
   
   lmm_out = lme(formulaLme, random=~1|subject, data=pkparam)
-  ci_out = intervals(lmm_out, 0.9) |> _$fixed |> _[l,] |> exp()
+  # エラー回避のため intervals() を使わず summary() から直接固定効果と標準誤差を取得
+  fixed_tab <- summary(lmm_out)$tTable
+  est <- fixed_tab[l, "Value"]
+  se  <- fixed_tab[l, "Std.Error"]
+  df_val <- fixed_tab[l, "DF"]
   
-  return(list(lmm_out, ci_out))
+  # 90%信頼区間の計算 (t分布を使用)
+  t_val <- qt(0.95, df = df_val)
+  ci_lower <- est - t_val * se
+  ci_upper <- est + t_val * se
+  
+  ci_vec <- c(lower = ci_lower, est = est, upper = ci_upper)
+  if(logarithm){
+    ci_out <- exp(ci_vec)
+  } else {
+    ci_out <- ci_vec
+  }
+  
+  return(list(lmm_out = lmm_out, ci_out = ci_out))
 }
 
 # lmeによるMMRMの結果をデータフレームにする関数
