@@ -15,8 +15,13 @@ function(input, output, session) {
         return(0)
       }
       
-      if(!is.numeric(pk()[, 4:ncol(pk())]) | !is.numeric(time()[, 4:ncol(time())])){
+      if(!is.numeric(pk_read[, 4:ncol(pk_read)]) | !is.numeric(time_read[, 4:ncol(time_read)])){
         showNotification("PKと時間のテーブルの値に文字列が含まれています。", duration = 5, type = "error")
+        return(0)
+      }
+      
+      if(pk_read$treatment |> unique() %in% c("試験製剤", "標準製剤") |> sum() != 2){
+        showNotification("製剤は2つとし，「試験製剤」，「標準製剤」の名前で設定して下さい。", duration = 5, type = "error")
         return(0)
       }
       
@@ -38,9 +43,16 @@ function(input, output, session) {
   observeEvent(input$calc_pkparam, {
     pkparam_temp(pkParam(pk(), time()))
     output$pkparam_table <- DT::renderDataTable(pkparam_temp(), options = list(pageLength = 50, dom = "t"))
+    
+    output$pkparam_test <- DT::renderDataTable(pk_summary_treat(pkparam_temp(), "試験製剤"), options = list(pageLength = 50, dom = "t"))
+    output$pkparam_ref <- DT::renderDataTable(pk_summary_treat(pkparam_temp(), "標準製剤"), options = list(pageLength = 50, dom = "t"))
         
     output$pkparam_group1 <- DT::renderDataTable(pk_summary(pkparam_temp(), group = 1), options = list(pageLength = 50, dom = "t"))
     output$pkparam_group2 <- DT::renderDataTable(pk_summary(pkparam_temp(), group = 2), options = list(pageLength = 50, dom = "t"))
+
+    output$pkparam_period1 <- DT::renderDataTable(pk_summary_period(pkparam_temp(), 1), options = list(pageLength = 50, dom = "t"))
+    output$pkparam_period2 <- DT::renderDataTable(pk_summary_period(pkparam_temp(), 2), options = list(pageLength = 50, dom = "t"))
+    
     output$pkparam_ms <- DT::renderDataTable(pk_summary(pkparam_temp()), options = list(pageLength = 50, dom = "t"))
     
     groupnames <- pkparam_temp()$group |> unique()
@@ -50,6 +62,39 @@ function(input, output, session) {
     
     nav_select(id = "switcher", selected = "PKパラメータ")
   })
+  
+  # PKパラメータの演算後にボタンを表示する
+  output$mmrmcalcButton <-
+    renderUI({
+      req(pkparam_temp())
+      actionButton("mmrm_calc", "分散分析・信頼区間を計算する")
+    })
+
+  output$PKparamAnalysisButton <-
+    renderUI({
+      req(pkparam_temp())
+      actionButton("PKparam_analysis", "PKパラメータのグラフ・正規性等を計算する")
+    })  
+
+  output$samplesizeNinput <-
+    renderUI({
+      req(pkparam_temp())
+      sliderInput("sample_size_nmax", "サンプルサイズ演算の最大被験者数（1群）", min = 2, max = 50, value = 15, step = 1)
+    })  
+   
+  output$Excelfilename <-
+    renderUI({
+      req(pkparam_temp())
+      textInput("filename_excel", "Excelファイル名", value = "BE解析結果")
+    })  
+  
+  
+  output$downloadExcelButton <-
+    renderUI({
+      req(pkparam_temp())
+      downloadButton("downloadExcel", "ダウンロード")
+    })
+  
   
   output$pk_table <- DT::renderDataTable(pk(), options = list(pageLength = 50, dom = "t"))
   output$time_table <- DT::renderDataTable(time(), options = list(pageLength = 50, dom = "t"))
@@ -92,7 +137,7 @@ function(input, output, session) {
     output$ci_AUC <-    renderTable(conv_ci_df(mmrm_out[[1]][[2]]))
     output$ci_AUCinf <- renderTable(conv_ci_df(mmrm_out[[2]][[2]]))
     output$ci_Cmax <-   renderTable(conv_ci_df(mmrm_out[[3]][[2]]))
-    output$ci_tmax <-   renderTable(conv_ci_df(mmrm_out[[4]][[2]] |> log()))
+    output$ci_tmax <-   renderTable(conv_ci_df_tmax(mmrm_out[[4]][[2]]))
     output$ci_kel <-    renderTable(conv_ci_df(mmrm_out[[5]][[2]]))
     output$ci_thalf <-  renderTable(conv_ci_df(mmrm_out[[6]][[2]]))
     output$ci_MRT <-    renderTable(conv_ci_df(mmrm_out[[7]][[2]]))
@@ -117,6 +162,18 @@ function(input, output, session) {
     output$lme_rand_MRTinf <- renderTable(conv_lme_rand_df(mmrm_out[[8]][[1]]))
     
     output$grouping_text <- renderText(paste0("グラフ/統計のグループ：", input$grouping))
+    
+    sample_size_results <- calc_cv(mmrm_out, input$sample_size_nmax)
+    
+    output$AUC_ci_ss <- renderTable(sample_size_results[[1]][[4]])
+    output$AUC_power_ss <- renderTable(sample_size_results[[1]][[3]])
+    output$AUC_ep <- renderText(sample_size_results[[1]][[1]])
+    output$AUC_CVw <- renderText(sample_size_results[[1]][[2]])
+    
+    output$Cmax_ci_ss <- renderTable(sample_size_results[[2]][[4]])
+    output$Cmax_power_ss <- renderTable(sample_size_results[[2]][[3]])
+    output$Cmax_ep <- renderText(sample_size_results[[2]][[1]])
+    output$Cmax_CVw <- renderText(sample_size_results[[2]][[2]])
     
     nav_select(id = "switcher", selected = "統計解析")
     nav_select(id = "switcher_stat", selected = "信頼区間の計算結果")
@@ -158,5 +215,17 @@ function(input, output, session) {
     output$ratio_table <- renderTable(ratio_c[[1]])
     output$ratio_table_s <- renderTable(ratio_c[[2]])
   })
+  
+  # Excelファイルのダウンロードを処理
+  output$downloadExcel <- downloadHandler(
+    filename = function(){
+      paste0(
+        Sys.Date(), " ", input$filename_excel, ".xlsx")
+    },
+    content = function(file){
+      out_excel(pk(), time(), pkparam_temp(), n_sbj = input$sample_size_nmax)$save(file)
+    }
+  )
+  
   
 }

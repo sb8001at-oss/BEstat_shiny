@@ -15,13 +15,18 @@ ui <- page_sidebar(
         downloadButton("downloadData", "保存")
       )
     ),
-    actionButton("calc_pkparam", "PKパラメータを計算する"),
-    actionButton("plot_summary_show", "血漿中薬物濃度グラフ（平均）を表示する"),
-    actionButton("plot_each_show", "血漿中薬物濃度グラフ（被験者ごと）を表示する"),
-    actionButton("mmrm_calc", "分散分析・信頼区間を計算する"),
-    actionButton("PKparam_analysis", "PKパラメータのグラフ・正規性等を計算する"),
-    selectInput("grouping", "グラフ/統計のグループ", choices = c("治験薬", "時期", "群"), selected = "治験薬")
-    
+    actionButton("calc_pkparam", "パラメータを計算", icon = icon("star"), style = "color: #fff; background-color: #007bff; border-color: #007bff; font-weight: bold;"),
+    actionButton("plot_summary_show", "血漿中薬物濃度グラフ（平均）を表示"),
+    actionButton("plot_each_show", "血漿中薬物濃度グラフ（被験者ごと）を表示"),
+    uiOutput("mmrmcalcButton"),
+    uiOutput("PKparamAnalysisButton"),
+    uiOutput("samplesizeNinput"),
+    selectInput("grouping", "グラフ/統計のグループ", choices = c("治験薬", "時期", "群"), selected = "治験薬"),
+    card(
+      card_header("結果をExcelに出力"),
+      uiOutput("Excelfilename"),
+      uiOutput("downloadExcelButton")
+    )
   ),
   navset_tab(
     id = "switcher",
@@ -41,6 +46,22 @@ ui <- page_sidebar(
           "各被験者のPKパラメータ",
           DT::dataTableOutput("pkparam_table", fill = TRUE)
         ),
+        
+        accordion_panel(
+          "試験製剤の要約",
+          DT::dataTableOutput("pkparam_test", fill = TRUE)
+        ),
+        accordion_panel(
+          "標準製剤の要約",
+          textOutput("group2_name"),
+          DT::dataTableOutput("pkparam_ref", fill = TRUE)
+        ),
+        
+        accordion_panel(
+          "全被験者の要約",
+          DT::dataTableOutput("pkparam_ms", fill = TRUE)
+        ),
+        
         accordion_panel(
           "グループ1の要約",
           textOutput("group1_name"),
@@ -51,10 +72,15 @@ ui <- page_sidebar(
           textOutput("group2_name"),
           DT::dataTableOutput("pkparam_group2", fill = TRUE)
         ),
+        
         accordion_panel(
-          "全被験者の要約",
-          DT::dataTableOutput("pkparam_ms", fill = TRUE)
-        )
+          "時期1の要約",
+          DT::dataTableOutput("pkparam_period1", fill = TRUE)
+        ),
+        accordion_panel(
+          "時期2の要約",
+          DT::dataTableOutput("pkparam_period2", fill = TRUE)
+        ),
       ),
       div(p("＊AUC：AUClast、RApoint：遡及点、CorrCoef：相関係数、thalf：t1/2、AUCratio：AUC/AUCinf"), style = "font-size: 0.9rem;")
     ),
@@ -78,6 +104,7 @@ ui <- page_sidebar(
           "信頼区間の計算結果",
           card(textOutput("grouping_text")),
           layout_column_wrap(
+            width = 1/4,
             card(
               card_header("AUC"),
               tableOutput("ci_AUC")
@@ -91,7 +118,7 @@ ui <- page_sidebar(
               tableOutput("ci_Cmax")
             ),
             card(
-              card_header("tmax"),
+              card_header("tmax（差の信頼区間）"),
               tableOutput("ci_tmax")
             ),
             card(
@@ -265,10 +292,49 @@ ui <- page_sidebar(
           card(
             card_header("被験者の比の要約"),
             tableOutput("ratio_table_s")
-          )
+          ),
+          div(p("＊値はグラフ/統計のグループの影響を受けず、常に試験製剤/標準製剤の比を返します。"), style = "font-size: 0.9rem;")
         ),
         nav_panel(
-          "例数（作成中）"
+          "例数設計",
+          accordion(
+            multiple = FALSE,
+            open = FALSE,
+            accordion_panel(
+              "AUC",
+              layout_column_wrap(
+                card(
+                  card_header("AUC：信頼区間"),
+                  tableOutput("AUC_ci_ss")
+                ),
+                card(
+                  card_header("AUC：検出力"),
+                  tableOutput("AUC_power_ss")
+                )
+              )              
+            ),
+            accordion_panel(
+              "Cmax",
+              layout_column_wrap(
+                card(
+                  card_header("Cmax：信頼区間"),
+                  tableOutput("Cmax_ci_ss")
+                ),
+                card(
+                  card_header("Cmax：検出力"),
+                  tableOutput("Cmax_power_ss")
+                )
+              )
+            )
+          ),
+
+          layout_column_wrap(
+            value_box("AUC：epsilon（AUCの個体内標準偏差）", value = textOutput("AUC_ep"), theme = "primary"),
+            value_box("AUC：CVw（AUCの個体内分散）", value = textOutput("AUC_CVw"), theme = "secondary"),
+            value_box("Cmax：epsilon（Cmaxの個体内標準偏差）", value = textOutput("Cmax_ep"), theme = "primary"),
+            value_box("Cmax：CVw（Cmaxの個体内分散）", value = textOutput("Cmax_CVw"), theme = "secondary")
+          ),
+          div(p("＊被験者数は2群。値はグラフ/統計のグループの影響を受けます。epsilonは線形混合モデルの演算結果として取得。CVwはexp(epsilon^2) - 1の平方根として計算。どちらもBEの難易度を反映します。"), style = "font-size: 0.9rem;")
         )
       )
     )

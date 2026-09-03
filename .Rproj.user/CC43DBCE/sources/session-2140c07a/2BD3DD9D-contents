@@ -1,2 +1,0 @@
-setwd("../")
-shinylive::export("BEstat", "site", template_params = list(title = "BEstat"))
