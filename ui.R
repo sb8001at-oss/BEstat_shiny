@@ -19,7 +19,6 @@ ui <- page_sidebar(
     actionButton("plot_summary_show", "血漿中薬物濃度グラフ（平均）を表示"),
     actionButton("plot_each_show", "血漿中薬物濃度グラフ（被験者ごと）を表示"),
     uiOutput("mmrmcalcButton"),
-    uiOutput("PKparamAnalysisButton"),
     uiOutput("samplesizeNinput"),
     selectInput("grouping", "グラフ/統計のグループ", choices = c("治験薬", "時期", "群"), selected = "治験薬"),
     card(
@@ -299,7 +298,7 @@ ui <- page_sidebar(
           "例数設計",
           accordion(
             multiple = FALSE,
-            open = FALSE,
+            open = "AUC",
             accordion_panel(
               "AUC",
               layout_column_wrap(

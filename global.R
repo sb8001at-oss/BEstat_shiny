@@ -6,6 +6,7 @@ library(zip)
 library(ggplot2)
 library(nlme)
 library(openxlsx2)
+library(tidyr)
 
 # システムの zip コマンドおよび bsdtar の使用を無効化し、zip パッケージを使わせる
 options("openxlsx2.no_utils_zip" = TRUE)
@@ -143,10 +144,9 @@ pk_summary_period <- function(pkparam, period){
   return(temp_ms)
 }
 
-# PKの平均値・標準偏差をグラフにする関数
-pk_summary_plot <- function(pk, time, grouping = "治験薬"){
-  # pkと時間をデータフレームに成形
-  pk_d <- data.frame(
+# pkと時間のデータフレームを成形する関数（pivot_longerに近い）
+pktime_long <- function(pk, time){
+  data.frame(
     s_t = paste(pk$subject, pk$treatment),
     subject = pk$subject,
     period = pk$period,
@@ -155,6 +155,33 @@ pk_summary_plot <- function(pk, time, grouping = "治験薬"){
     value = pk[, 4:ncol(pk)] |> unlist(),
     time = time[, 4:ncol(time)] |> unlist()
   ) |> na.omit()
+}
+
+# PKの平均値・標準偏差（薬剤ごと）を返す関数
+pk_treatment_ms <- function(pk_d){
+  pk_d_fc <- factor(paste(pk_d$time, pk_d$treatment, sep = ","))
+  
+  pk_d_m <- tapply(pk_d$value, pk_d_fc, mean)
+  pk_d_s <- tapply(pk_d$value, pk_d_fc, sd)
+  
+  names_data <- names(pk_d_m) |> strsplit(",") |> as.data.frame() |> t()
+  rownames(names_data) <- NULL
+  
+  out <- data.frame(names_data, pk_d_m, pk_d_s)
+  colnames(out) <- c("時間", "薬剤", "平均値", "標準偏差")
+  out <- out |> 
+    pivot_wider(names_from = `薬剤`, values_from = c(`平均値`, `標準偏差`)) |> 
+    _[order(out$`時間`), ]
+  out$`時間` <- as.numeric(out$`時間`)
+  out <- na.omit(out)
+  return(out)
+}
+
+
+# PKの平均値・標準偏差をグラフにする関数
+pk_summary_plot <- function(pk, time, grouping = "治験薬"){
+  
+  pk_d <- pktime_long(pk, time)
   
   if(grouping == "治験薬"){
     pk_d_fc <- factor(paste(pk_d$time, pk_d$treatment, sep = ","))
@@ -313,23 +340,34 @@ conv_lme_df <- function(lme_obj){
   return(temp)
 }
 
-# lmeによるMMRMの結果をデータフレームにする関数
+
+# 桁が小さい時に指数表記にする関数
+fmt_p <- function(x){
+  ifelse(
+    x < 0.0001,
+    format(x, scientific = TRUE, digits = 4),
+    sprintf("%.4f", x)
+  )
+}
+
+# lmeによるMMRMの結果をデータフレームにする関数（ランダム効果）
 conv_lme_rand_df <- function(lme_obj){
   temp <- ranef(lme_obj)
-  temp <- cbind(tag = rownames(temp), temp)
+  
+  temp <- cbind(tag = rownames(temp), fmt_p(temp[, 1]))
   return(temp)
 }
 
 # 信頼区間をデータフレームにする関数
 conv_ci_df <- function(ci_obj){
-  temp <- cbind(label = c("上側90%", "中央値", "下側90%"), (1/ci_obj) |> as.data.frame())
+  temp <- cbind(label = c("上側90%", "中央値", "下側90%"), (1/ci_obj) |> round(4) |> as.data.frame())
   colnames(temp) <- c("", "値")
   temp
 }
 
 # tmaxだけ違う関数が必要
 conv_ci_df_tmax <- function(ci_obj){
-  temp <- cbind(label = c("上側90%", "中央値", "下側90%"), rev(ci_obj) |> as.data.frame())
+  temp <- cbind(label = c("上側90%", "中央値", "下側90%"), rev(ci_obj) |> round(4) |> as.data.frame())
   colnames(temp) <- c("", "値")
   temp
 }
@@ -353,7 +391,7 @@ pkparam_bj_plot <- function(pkparam, grouping, type){
   if(grouping == "治験薬"){
     p <- 
       pkparam[,c(1:9, 12:14)] |> 
-        tidyr::pivot_longer(5:12) |> 
+        pivot_longer(5:12) |> 
         ggplot(aes(x = treatment, y = value, color = treatment)) +
         facet_wrap(~name, scales = "free_y") +
         labs(x = NULL, y = NULL) +
@@ -366,7 +404,7 @@ pkparam_bj_plot <- function(pkparam, grouping, type){
   } else if(grouping == "時期"){
     p <- 
       pkparam[,c(1:9, 12:14)] |> 
-      tidyr::pivot_longer(5:12) |> 
+      pivot_longer(5:12) |> 
       ggplot(aes(x = factor(period), y = value, color = factor(period))) +
       facet_wrap(~name, scales = "free_y") +
       labs(x = NULL, y = NULL) +
@@ -379,7 +417,7 @@ pkparam_bj_plot <- function(pkparam, grouping, type){
   } else if(grouping == "群"){
     p <- 
       pkparam[,c(1:9, 12:14)] |> 
-      tidyr::pivot_longer(5:12) |> 
+      pivot_longer(5:12) |> 
       ggplot(aes(x = factor(group), y = value, color = factor(group))) +
       facet_wrap(~name, scales = "free_y") +
       labs(x = NULL, y = NULL) +
@@ -398,6 +436,17 @@ pkparam_bj_plot <- function(pkparam, grouping, type){
   }
 }
 
+# Shapiro-Wilkの結果をデータフレームにする関数
+sw_df <- function(sw_out){
+  statistic <- sw_out$statistic |> round(4)
+  p_value <- sw_out$p.value |> round(4)
+  
+  d <- data.frame(statistic, p_value)
+  colnames(d) <- c("統計量", "p-value")
+  rownames(d) <- NULL
+  d
+}
+
 # Shapiro-Wilk testを実行し，正規性を評価するための関数
 normality_test <- function(pkparam){
   names_param <- c("AUC", "AUCinf", "Cmax", "tmax", "kel", "thalf", "MRT", "MRTinf")
@@ -405,9 +454,9 @@ normality_test <- function(pkparam){
   for(i in 1:8){
     tname <- names_param[i]
     if(tname == "tmax"){
-      out[[i]] <- pkparam[, tname] |> shapiro.test() |> broom::tidy() |> as.data.frame() |> _[, 1:2]
+      out[[i]] <- pkparam[, tname] |> shapiro.test() |> sw_df()
     } else {
-      out[[i]] <- pkparam[, tname] |> log() |> shapiro.test() |> broom::tidy() |> as.data.frame() |> _[, 1:2]
+      out[[i]] <- pkparam[, tname] |> log() |> shapiro.test() |> sw_df() |> as.data.frame()
     }
   }
   return(out)
@@ -417,11 +466,11 @@ normality_test <- function(pkparam){
 pk_ratio_calc <- function(pkparam){
   temp_auc <- 
     pkparam[, c("subject", "treatment", "AUC")] |> 
-    tidyr::pivot_wider(names_from = treatment, values_from = AUC)
+    pivot_wider(names_from = treatment, values_from = AUC)
   
   temp_cmax <- 
     pkparam[, c("subject", "treatment", "Cmax")] |> 
-    tidyr::pivot_wider(names_from = treatment, values_from = Cmax)
+    pivot_wider(names_from = treatment, values_from = Cmax)
   
   out <- data.frame(
     subject = temp_auc$subject,
@@ -478,6 +527,30 @@ calc_cv <- function(mmrm_out, each_group_n_sbj){
   list(AUC_sample_size, Cmax_sample_size)
 }
 
+prompt_text <- 
+  "以下のようなプロンプトを利用すると，添付文書っぽいExcelのグラフを作成することができます．うまく書けなかった時は，うまく書けていない部分を指摘し，もう一度描画させてください．
+  
+  シート名「血漿中濃度平均値（グラフ用）」のデータを使って，グラフを描画します．グラフは医薬品の添付文書に利用できるようにします．
+  - グラフは「血漿中濃度平均値（グラフ用）」のシートに示して下さい．
+  - Excelのグラフ挿入を利用してグラフを作成して下さい．
+  - 時間は数値で，x軸にします．時間は昇順に並べ替えてからグラフにして下さい．
+  - 値は平均値_試験製剤と平均値_標準製剤の2つです．
+  - エラーバーの大きさはそれぞれ標準偏差_試験製剤と標準偏差_標準製剤です．エラーバーの値を計算する必要があれば，F，G，H，I列に追記して下さい．
+  - 線の色は黒で，標準製剤は破線にして下さい．線の太さは1ptとして下さい．
+  - 点は試験製剤が□，標準製剤が●とします．
+  - 縦軸は血漿中未変化体濃度，横軸は投与後時間と表記して下さい．
+  - 縦軸の単位は(ng/mL)で，軸の上に配置して下さい．
+  - 横軸の単位は(時間)で，横軸の右側に配置して下さい．
+  - 凡例の表記は標準製剤・試験製剤として下さい．Excelの標準の凡例（記号）は残して下さい．
+  - 凡例は右上に表示して下さい．
+  - 凡例の下に「Mean±S.D.，n=○○」と記載します．○○には，血漿中薬物濃度のシートのsubjectの人数を半分にした数値を入力して下さい．
+  - 文字は日本語フォントを「MS明朝」で，英語フォントを「Century」で表示して下さい．
+  - 文字サイズは10ポイントにして下さい．グラフエリアのサイズは高さ10.6cm，幅14.4cmとして下さい．
+  - 目盛線は「なし」にして下さい．
+  - 目盛の種類は「外向き」，補助目盛の種類は「なし」にして下さい．
+  - 挿入したテキストボックスの枠線は消し，背景色は無色として下さい．" |> 
+  wb_comment(author = "", width = 12, height = 12)
+
 # Excelで結果を出力するための関数
 out_excel <- function(pk, time, pkparam, n_sbj = 15){
   # PKパラメータの要約を計算
@@ -512,6 +585,9 @@ out_excel <- function(pk, time, pkparam, n_sbj = 15){
       legend.position = "bottom",
       legend.text = element_text(size = 35),
       strip.text = element_text(size = 35)) 
+  
+  # PKの平均値・標準偏差を計算
+  pk_ms_time <- pk_treatment_ms(pktime_long(pk, time))
   
   # MMRMの演算結果
   mmrm_result <- mmrm_params_f(pkparam, "治験薬")
@@ -683,6 +759,9 @@ out_excel <- function(pk, time, pkparam, n_sbj = 15){
     add_data("例数設計Cmax", "信頼区間", start_col = 5, start_row = 1)$
     add_data_table("例数設計Cmax", cv_ssn_calc[[2]][[4]], start_col = 5, start_row = 2)$
     set_col_widths("例数設計Cmax", widths = 11, cols = 1:8)$
+    add_worksheet("血漿中濃度平均値（グラフ用）")$
+    add_data_table("血漿中濃度平均値（グラフ用）", pk_ms_time)$
+    add_comment("血漿中濃度平均値（グラフ用）", prompt_text, dims = "F1")$
     set_page_setup(1, orientation = "landscape", fit_to_width = 1, fit_to_height = 1)$
     set_page_setup(2, orientation = "landscape", fit_to_width = 1, fit_to_height = 1)$
     set_page_setup(3, orientation = "landscape", fit_to_width = 1, fit_to_height = 1)$
