@@ -79,12 +79,12 @@ function(input, output, session) {
       req(pkparam_temp())
       actionButton("mmrm_calc", "分散分析・信頼区間を計算する")
     })
-
-  output$PKparamAnalysisButton <-
+  
+  output$pkGraphButton <-
     renderUI({
       req(pkparam_temp())
-      actionButton("PKparam_analysis", "PKパラメータのグラフ・正規性等を計算する")
-    })  
+      actionButton("pkparam_graph", "PKパラメータのグラフを表示する")
+    })
 
   output$samplesizeNinput <-
     renderUI({
@@ -141,6 +141,8 @@ function(input, output, session) {
       showNotification("先にPKパラメータを計算して下さい。", duration = 5, type = "error")
       return(0)
     }
+    
+    output$grouping_text <- renderText(paste0("グラフ/統計のグループ：", input$grouping))
       
     mmrm_out <- mmrm_params_f(pkparam_temp(), input$grouping)
     
@@ -171,8 +173,6 @@ function(input, output, session) {
     output$lme_rand_MRT <-    renderTable(conv_lme_rand_df(mmrm_out[[7]][[1]]), digits = 4)
     output$lme_rand_MRTinf <- renderTable(conv_lme_rand_df(mmrm_out[[8]][[1]]), digits = 4)
     
-    output$grouping_text <- renderText(paste0("グラフ/統計のグループ：", input$grouping))
-    
     sample_size_results <- calc_cv(mmrm_out, input$sample_size_nmax)
     
     output$AUC_ci_ss <- renderTable(sample_size_results[[1]][[4]], digits = 4)
@@ -184,20 +184,7 @@ function(input, output, session) {
     output$Cmax_power_ss <- renderTable(sample_size_results[[2]][[3]], digits = 4)
     output$Cmax_ep <- renderText(sample_size_results[[2]][[1]])
     output$Cmax_CVw <- renderText(sample_size_results[[2]][[2]])
-    
-    output$pkparam_boxplot <- 
-      renderPlot(
-        pkparam_bj_plot(pkparam_temp(), input$grouping, type = "boxplot")
-      )
-    
-    output$pkparam_jitterplot <- 
-      renderPlot(
-        pkparam_bj_plot(pkparam_temp(), input$grouping, type = "jitter")
-      )
-    
-    nav_select(id = "switcher", selected = "統計解析")
-    nav_select(id = "switcher_stat", selected = "PKパラメータのグラフ")
-    
+
     lst_norm_test <- normality_test(pkparam_temp())
     
     output$normality_test_AUC <- renderTable(lst_norm_test[[1]], digits = 4)
@@ -216,6 +203,22 @@ function(input, output, session) {
     
     nav_select(id = "switcher", selected = "統計解析")
     nav_select(id = "switcher_stat", selected = "信頼区間の計算結果")
+  })
+  
+  observeEvent(input$pkparam_graph, {
+    
+    output$pkparam_boxplot <- 
+      renderPlot(
+        pkparam_bj_plot(pkparam_temp(), input$grouping, type = "boxplot")
+      )
+    
+    output$pkparam_jitterplot <- 
+      renderPlot(
+        pkparam_bj_plot(pkparam_temp(), input$grouping, type = "jitter")
+      )
+    
+    nav_select(id = "switcher", selected = "統計解析")
+    nav_select(id = "switcher_stat", selected = "PKパラメータのグラフ")
   })
   
   # Excelファイルのダウンロードを処理

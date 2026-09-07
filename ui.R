@@ -1,6 +1,34 @@
 ui <- page_sidebar(
   title = "BEの統計解析",
   theme = bs_theme(bootswatch = "united"),
+  tags$head( 
+    tags$style(HTML("
+        /* デフォルトでは非表示 */
+        #busy-indicator {
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: #333333;
+          color: white;
+          padding: 10px 20px;
+          border-radius: 4px;
+          font-weight: bold;
+          box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+          z-index: 9999;
+          pointer-events: none; /* クリックを阻害しない */
+          
+          /* スムーズに表示・非表示を切り替えるアニメーション設定 */
+          opacity: 0;
+          transition: opacity 0.3s ease-in-out;
+        }
+        
+        /* Shinyが『計算中（busy）』になった時だけ表示する */
+        html.shiny-busy #busy-indicator {
+          opacity: 1;
+        }
+      "))
+  ),
+  
   sidebar = sidebar(
     accordion(
       open = FALSE,
@@ -19,6 +47,7 @@ ui <- page_sidebar(
     actionButton("plot_summary_show", "血漿中薬物濃度グラフ（平均）を表示"),
     actionButton("plot_each_show", "血漿中薬物濃度グラフ（被験者ごと）を表示"),
     uiOutput("mmrmcalcButton"),
+    uiOutput("pkGraphButton"),
     uiOutput("samplesizeNinput"),
     selectInput("grouping", "グラフ/統計のグループ", choices = c("治験薬", "時期", "群"), selected = "治験薬"),
     card(
@@ -230,20 +259,6 @@ ui <- page_sidebar(
           )
         ),
         nav_panel(
-          "PKパラメータのグラフ",
-          layout_columns(
-            card(
-              card_header("箱ひげ図"),
-              plotOutput("pkparam_boxplot", fill = TRUE, height = "750px")
-            ),
-            card(
-              card_header("ジッタープロット"),
-              plotOutput("pkparam_jitterplot", fill = TRUE, height = "750px")
-            )
-            
-          )
-        ),
-        nav_panel(
           "正規性の確認",
           layout_column_wrap(
             width = 1/3, 
@@ -334,6 +349,20 @@ ui <- page_sidebar(
             value_box("Cmax：CVw（Cmaxの個体内分散）", value = textOutput("Cmax_CVw"), theme = "secondary")
           ),
           div(p("＊被験者数は2群。値はグラフ/統計のグループの影響を受けます。epsilonは線形混合モデルの演算結果として取得。CVwはexp(epsilon^2) - 1の平方根として計算。どちらもBEの難易度を反映します。"), style = "font-size: 0.9rem;")
+        ),
+        nav_panel(
+          "PKパラメータのグラフ",
+          div(id = "busy-indicator", "処理中..."),
+          layout_columns(
+            card(
+              card_header("箱ひげ図"),
+              plotOutput("pkparam_boxplot", fill = TRUE, height = "750px")
+            ),
+            card(
+              card_header("ジッタープロット"),
+              plotOutput("pkparam_jitterplot", fill = TRUE, height = "750px")
+            )
+          )
         )
       )
     )
