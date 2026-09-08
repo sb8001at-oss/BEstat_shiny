@@ -47,6 +47,7 @@ ui <- page_sidebar(
     actionButton("plot_summary_show", "血漿中薬物濃度グラフ（平均）を表示"),
     actionButton("plot_each_show", "血漿中薬物濃度グラフ（被験者ごと）を表示"),
     uiOutput("mmrmcalcButton"),
+    uiOutput("normalityButton"),
     uiOutput("pkGraphButton"),
     uiOutput("samplesizeNinput"),
     selectInput("grouping", "グラフ/統計のグループ", choices = c("治験薬", "時期", "群"), selected = "治験薬"),
@@ -259,6 +260,18 @@ ui <- page_sidebar(
           )
         ),
         nav_panel(
+          "試験製剤/標準製剤の比",
+          card(
+            card_header("各被験者の比"),
+            tableOutput("ratio_table")
+          ),
+          card(
+            card_header("被験者の比の要約"),
+            tableOutput("ratio_table_s")
+          ),
+          div(p("＊値はグラフ/統計のグループの影響を受けず、常に試験製剤/標準製剤の比を返します。"), style = "font-size: 0.9rem;")
+        ),
+        nav_panel(
           "正規性の確認",
           layout_column_wrap(
             width = 1/3, 
@@ -296,18 +309,6 @@ ui <- page_sidebar(
             )
           ),
           div(p("＊Shapiro-Wilk検定の結果。p < 0.05の時は正規分布ではない"), style = "font-size: 0.9rem;")
-        ),
-        nav_panel(
-          "試験製剤/標準製剤の比",
-          card(
-            card_header("各被験者の比"),
-            tableOutput("ratio_table")
-          ),
-          card(
-            card_header("被験者の比の要約"),
-            tableOutput("ratio_table_s")
-          ),
-          div(p("＊値はグラフ/統計のグループの影響を受けず、常に試験製剤/標準製剤の比を返します。"), style = "font-size: 0.9rem;")
         ),
         nav_panel(
           "例数設計",

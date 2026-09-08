@@ -77,13 +77,19 @@ function(input, output, session) {
   output$mmrmcalcButton <-
     renderUI({
       req(pkparam_temp())
-      actionButton("mmrm_calc", "分散分析・信頼区間を計算する")
+      actionButton("mmrm_calc", "分散分析・信頼区間を計算")
     })
   
   output$pkGraphButton <-
     renderUI({
       req(pkparam_temp())
-      actionButton("pkparam_graph", "PKパラメータのグラフを表示する")
+      actionButton("pkparam_graph", "PKパラメータのグラフ")
+    })
+  
+  output$normalityButton <- 
+    renderUI({
+      req(mmrm_out())
+      actionButton("normality", "正規性・例数を評価")      
     })
 
   output$samplesizeNinput <-
@@ -96,8 +102,7 @@ function(input, output, session) {
     renderUI({
       req(pkparam_temp())
       textInput("filename_excel", "Excelファイル名", value = "BE解析結果")
-    })  
-  
+    }) 
   
   output$downloadExcelButton <-
     renderUI({
@@ -118,7 +123,8 @@ function(input, output, session) {
         pk_summary_plot(pk(), time(), "群")
       } else{
         pk_summary_plot(pk(), time())
-      }
+      },
+      execOnResize = TRUE
     )
     nav_select(id = "switcher", selected = "血漿中薬物濃度グラフ（平均±標準偏差）")
   })
@@ -130,10 +136,13 @@ function(input, output, session) {
         pk_each_plot(pk(), time(), "時期")
       } else {
         pk_each_plot(pk(), time())
-      }
+      },
+      execOnResize = TRUE
     )
     nav_select(id = "switcher", selected = "血漿中薬物濃度グラフ（被験者ごと）")
   })
+  
+  mmrm_out <- reactiveVal(NULL)
   
   # 分散分析結果・信頼区間を表示する
   observeEvent(input$mmrm_calc, {
@@ -144,36 +153,48 @@ function(input, output, session) {
     
     output$grouping_text <- renderText(paste0("グラフ/統計のグループ：", input$grouping))
       
-    mmrm_out <- mmrm_params_f(pkparam_temp(), input$grouping)
+    mmrm_out(mmrm_params_f(pkparam_temp(), input$grouping))
     
-    output$ci_AUC <-    renderTable(conv_ci_df(mmrm_out[[1]][[2]]), digits = 4)
-    output$ci_AUCinf <- renderTable(conv_ci_df(mmrm_out[[2]][[2]]), digits = 4)
-    output$ci_Cmax <-   renderTable(conv_ci_df(mmrm_out[[3]][[2]]), digits = 4)
-    output$ci_tmax <-   renderTable(conv_ci_df_tmax(mmrm_out[[4]][[2]]), digits = 4)
-    output$ci_kel <-    renderTable(conv_ci_df(mmrm_out[[5]][[2]]), digits = 4)
-    output$ci_thalf <-  renderTable(conv_ci_df(mmrm_out[[6]][[2]]), digits = 4)
-    output$ci_MRT <-    renderTable(conv_ci_df(mmrm_out[[7]][[2]]), digits = 4)
-    output$ci_MRTinf <- renderTable(conv_ci_df(mmrm_out[[8]][[2]]), digits = 4)
+    output$ci_AUC <-    renderTable(conv_ci_df(mmrm_out()[[1]][[2]]), digits = 4)
+    output$ci_AUCinf <- renderTable(conv_ci_df(mmrm_out()[[2]][[2]]), digits = 4)
+    output$ci_Cmax <-   renderTable(conv_ci_df(mmrm_out()[[3]][[2]]), digits = 4)
+    output$ci_tmax <-   renderTable(conv_ci_df_tmax(mmrm_out()[[4]][[2]]), digits = 4)
+    output$ci_kel <-    renderTable(conv_ci_df(mmrm_out()[[5]][[2]]), digits = 4)
+    output$ci_thalf <-  renderTable(conv_ci_df(mmrm_out()[[6]][[2]]), digits = 4)
+    output$ci_MRT <-    renderTable(conv_ci_df(mmrm_out()[[7]][[2]]), digits = 4)
+    output$ci_MRTinf <- renderTable(conv_ci_df(mmrm_out()[[8]][[2]]), digits = 4)
     
-    output$lme_AUC <-    renderTable(conv_lme_df(mmrm_out[[1]][[1]]), digits = 4)
-    output$lme_AUCinf <- renderTable(conv_lme_df(mmrm_out[[2]][[1]]), digits = 4)
-    output$lme_Cmax <-   renderTable(conv_lme_df(mmrm_out[[3]][[1]]), digits = 4)
-    output$lme_tmax <-   renderTable(conv_lme_df(mmrm_out[[4]][[1]]), digits = 4)
-    output$lme_kel <-    renderTable(conv_lme_df(mmrm_out[[5]][[1]]), digits = 4)
-    output$lme_thalf <-  renderTable(conv_lme_df(mmrm_out[[6]][[1]]), digits = 4)
-    output$lme_MRT <-    renderTable(conv_lme_df(mmrm_out[[7]][[1]]), digits = 4)
-    output$lme_MRTinf <- renderTable(conv_lme_df(mmrm_out[[8]][[1]]), digits = 4)
+    output$lme_AUC <-    renderTable(conv_lme_df(mmrm_out()[[1]][[1]]), digits = 4)
+    output$lme_AUCinf <- renderTable(conv_lme_df(mmrm_out()[[2]][[1]]), digits = 4)
+    output$lme_Cmax <-   renderTable(conv_lme_df(mmrm_out()[[3]][[1]]), digits = 4)
+    output$lme_tmax <-   renderTable(conv_lme_df(mmrm_out()[[4]][[1]]), digits = 4)
+    output$lme_kel <-    renderTable(conv_lme_df(mmrm_out()[[5]][[1]]), digits = 4)
+    output$lme_thalf <-  renderTable(conv_lme_df(mmrm_out()[[6]][[1]]), digits = 4)
+    output$lme_MRT <-    renderTable(conv_lme_df(mmrm_out()[[7]][[1]]), digits = 4)
+    output$lme_MRTinf <- renderTable(conv_lme_df(mmrm_out()[[8]][[1]]), digits = 4)
     
-    output$lme_rand_AUC <-    renderTable(conv_lme_rand_df(mmrm_out[[1]][[1]]), digits = 4)
-    output$lme_rand_AUCinf <- renderTable(conv_lme_rand_df(mmrm_out[[2]][[1]]), digits = 4)
-    output$lme_rand_Cmax <-   renderTable(conv_lme_rand_df(mmrm_out[[3]][[1]]), digits = 4)
-    output$lme_rand_tmax <-   renderTable(conv_lme_rand_df(mmrm_out[[4]][[1]]), digits = 15)
-    output$lme_rand_kel <-    renderTable(conv_lme_rand_df(mmrm_out[[5]][[1]]), digits = 4)
-    output$lme_rand_thalf <-  renderTable(conv_lme_rand_df(mmrm_out[[6]][[1]]), digits = 4)
-    output$lme_rand_MRT <-    renderTable(conv_lme_rand_df(mmrm_out[[7]][[1]]), digits = 4)
-    output$lme_rand_MRTinf <- renderTable(conv_lme_rand_df(mmrm_out[[8]][[1]]), digits = 4)
+    output$lme_rand_AUC <-    renderTable(conv_lme_rand_df(mmrm_out()[[1]][[1]]), digits = 4)
+    output$lme_rand_AUCinf <- renderTable(conv_lme_rand_df(mmrm_out()[[2]][[1]]), digits = 4)
+    output$lme_rand_Cmax <-   renderTable(conv_lme_rand_df(mmrm_out()[[3]][[1]]), digits = 4)
+    output$lme_rand_tmax <-   renderTable(conv_lme_rand_df(mmrm_out()[[4]][[1]]), digits = 15)
+    output$lme_rand_kel <-    renderTable(conv_lme_rand_df(mmrm_out()[[5]][[1]]), digits = 4)
+    output$lme_rand_thalf <-  renderTable(conv_lme_rand_df(mmrm_out()[[6]][[1]]), digits = 4)
+    output$lme_rand_MRT <-    renderTable(conv_lme_rand_df(mmrm_out()[[7]][[1]]), digits = 4)
+    output$lme_rand_MRTinf <- renderTable(conv_lme_rand_df(mmrm_out()[[8]][[1]]), digits = 4)
     
-    sample_size_results <- calc_cv(mmrm_out, input$sample_size_nmax)
+    ratio_c <- pk_ratio_calc(pkparam_temp())
+    
+    output$ratio_table <- renderTable(ratio_c[[1]], digits = 4)
+    output$ratio_table_s <- renderTable(ratio_c[[2]], digits = 4)
+    
+    nav_select(id = "switcher", selected = "統計解析")
+    nav_select(id = "switcher_stat", selected = "信頼区間の計算結果")
+  })
+    
+  
+  observeEvent(input$normality, {
+    
+    sample_size_results <- calc_cv(mmrm_out(), input$sample_size_nmax)
     
     output$AUC_ci_ss <- renderTable(sample_size_results[[1]][[4]], digits = 4)
     output$AUC_power_ss <- renderTable(sample_size_results[[1]][[3]], digits = 4)
@@ -196,29 +217,25 @@ function(input, output, session) {
     output$normality_test_MRT <- renderTable(lst_norm_test[[7]], digits = 4)
     output$normality_test_MRTinf <- renderTable(lst_norm_test[[8]], digits = 4)
     
-    ratio_c <- pk_ratio_calc(pkparam_temp())
-    
-    output$ratio_table <- renderTable(ratio_c[[1]], digits = 4)
-    output$ratio_table_s <- renderTable(ratio_c[[2]], digits = 4)
-    
     nav_select(id = "switcher", selected = "統計解析")
-    nav_select(id = "switcher_stat", selected = "信頼区間の計算結果")
+    nav_select(id = "switcher_stat", selected = "正規性の確認")
   })
   
   observeEvent(input$pkparam_graph, {
+    nav_select(id = "switcher", selected = "統計解析")
+    nav_select(id = "switcher_stat", selected = "PKパラメータのグラフ")
     
     output$pkparam_boxplot <- 
       renderPlot(
-        pkparam_bj_plot(pkparam_temp(), input$grouping, type = "boxplot")
+        pkparam_bj_plot(pkparam_temp(), input$grouping, type = "boxplot"),
+        execOnResize = TRUE
       )
     
     output$pkparam_jitterplot <- 
       renderPlot(
-        pkparam_bj_plot(pkparam_temp(), input$grouping, type = "jitter")
+        pkparam_bj_plot(pkparam_temp(), input$grouping, type = "jitter"),
+        execOnResize = TRUE
       )
-    
-    nav_select(id = "switcher", selected = "統計解析")
-    nav_select(id = "switcher_stat", selected = "PKパラメータのグラフ")
   })
   
   # Excelファイルのダウンロードを処理
