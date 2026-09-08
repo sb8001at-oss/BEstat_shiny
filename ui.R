@@ -114,12 +114,14 @@ ui <- page_sidebar(
       div(p("＊AUC：AUClast、RApoint：遡及点、CorrCoef：相関係数、thalf：t1/2、AUCratio：AUC/AUCinf"), style = "font-size: 0.9rem;")
     ),
     nav_panel(
+      div(id = "busy-indicator", "処理中..."),
       "血漿中薬物濃度グラフ（平均±標準偏差）",
       card(
         plotOutput("pk_summary_plot_out", fill = TRUE, height = "850px")
       )
     ),
     nav_panel(
+      div(id = "busy-indicator", "処理中..."),
       "血漿中薬物濃度グラフ（被験者ごと）",
       card(
         plotOutput("pk_each_plot_out", fill = TRUE, height = "850px")
@@ -273,6 +275,7 @@ ui <- page_sidebar(
         ),
         nav_panel(
           "正規性の確認",
+          div(id = "busy-indicator", "処理中..."),
           layout_column_wrap(
             width = 1/3, 
             card(

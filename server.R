@@ -37,6 +37,8 @@ function(input, output, session) {
       
       pk(pk_read)
       time(time_read)
+      pkparam_temp(NULL)
+      mmrm_out(NULL)
   })
   
   # テンプレートのExcelファイルを保存する
@@ -151,6 +153,9 @@ function(input, output, session) {
       return(0)
     }
     
+    nav_select(id = "switcher", selected = "統計解析")
+    nav_select(id = "switcher_stat", selected = "信頼区間の計算結果")
+    
     output$grouping_text <- renderText(paste0("グラフ/統計のグループ：", input$grouping))
       
     mmrm_out(mmrm_params_f(pkparam_temp(), input$grouping))
@@ -186,13 +191,12 @@ function(input, output, session) {
     
     output$ratio_table <- renderTable(ratio_c[[1]], digits = 4)
     output$ratio_table_s <- renderTable(ratio_c[[2]], digits = 4)
-    
-    nav_select(id = "switcher", selected = "統計解析")
-    nav_select(id = "switcher_stat", selected = "信頼区間の計算結果")
   })
     
   
   observeEvent(input$normality, {
+    nav_select(id = "switcher", selected = "統計解析")
+    nav_select(id = "switcher_stat", selected = "正規性の確認")
     
     sample_size_results <- calc_cv(mmrm_out(), input$sample_size_nmax)
     
@@ -216,9 +220,6 @@ function(input, output, session) {
     output$normality_test_thalf <- renderTable(lst_norm_test[[6]], digits = 4)
     output$normality_test_MRT <- renderTable(lst_norm_test[[7]], digits = 4)
     output$normality_test_MRTinf <- renderTable(lst_norm_test[[8]], digits = 4)
-    
-    nav_select(id = "switcher", selected = "統計解析")
-    nav_select(id = "switcher_stat", selected = "正規性の確認")
   })
   
   observeEvent(input$pkparam_graph, {

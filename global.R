@@ -44,7 +44,7 @@ pkParam <- function(pk, time){
   if(!is.numeric(pk_d$value) | !is.numeric(pk_d$time)){return(NULL)}
   
   # PKパラメータの計算（NonCompart::tblNCAを利用）
-  pkparam <- NonCompart::tblNCA(pk_d, key="s_t", colTime="time", colConc="value", excludeDelta = 0.3)
+  pkparam <- NonCompart::tblNCA(pk_d, key="s_t", colTime="time", colConc="value", excludeDelta = 0.3, R2ADJ = 0)
   
   pkparam <- 
     data.frame(
