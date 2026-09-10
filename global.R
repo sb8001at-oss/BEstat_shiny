@@ -68,6 +68,59 @@ pkParam <- function(pk, time){
   return(pkparam)
 }
 
+# NonCompartでNAが出ることがあるので、自作のPKパラメータ評価の関数を用いる
+ncm_self <- function(conc, time){
+  Cmax <- max(conc)
+  tmax <- time[which(conc == Cmax)]
+  index_tmax <- which(conc == Cmax)
+  
+  conc_omitZero <- c(0, conc[conc > 0])
+  time_omitZero <- c(0, time[conc > 0])
+  
+  AUC <- 
+    (head(conc_omitZero + conc_omitZero[-1], -1) *
+       head(-time_omitZero + time_omitZero[-1], -1) / 2) |> 
+    sum() |> suppressWarnings()
+  
+  conc_s <- conc_omitZero[-(1:(index_tmax - 1))]
+  time_s <- time_omitZero[-(1:(index_tmax - 1))]
+  
+  
+  cor_select <- function(i){  
+    if(i == 0){return(cor(conc_s, time_s))} else {
+      seq_row <- 1:i |> unique()
+      cor(log(conc_s[-seq_row]), time_s[-seq_row])
+    }
+  }
+  
+  cor_pk <- mapply(cor_select, 0:(length(conc_s)-1))
+  min_cor <- cor_pk[cor_pk != -1]  |> na.omit() |> _[1]
+  
+  index_mincor <- (which(cor_pk == min_cor) - 1 + index_tmax):(index_tmax + length(conc_s) - 1)
+  
+  RApoint <- length(index_mincor)
+  kel <- lm(log(conc[index_mincor]) ~ time[index_mincor]) |> coef() |> _[2]
+  names(kel) <- NULL
+  thalf <- -log(2)/kel
+  Clast <- rev(conc_omitZero)[1]
+  AUCinf <- AUC - Clast/kel
+  
+  ct <- conc * time
+  ct_omitZero <- c(0, ct[ct > 0])
+  AUMC <- 
+    (head(ct_omitZero + ct_omitZero[-1], -1) *
+       head(-time_omitZero + time_omitZero[-1], -1) / 2) |> 
+    sum() |> suppressWarnings()
+  AUMCinf <- 
+    AUMC - time[conc == Clast] * Clast / kel + Clast/kel^2
+  MRT <- AUMC/AUC
+  MRTinf <- AUMCinf/AUCinf
+  
+  out <- c(AUC, AUCinf, Cmax, tmax, -kel, RApoint, CorrCoef = -min_cor, thalf, MRT, MRTinf, AUCratio = AUC/AUCinf)
+  names(out) <- c("AUC", "AUCinf", "Cmax", "tmax", "kel", "RApoint", "CorrCoef", "thalf", "MRT", "MRTinf", "AUCratio")
+  out
+}
+
 # PKパラメータの要約を作成するための関数
 pk_summary <- function(pkparam, group = "all"){
   

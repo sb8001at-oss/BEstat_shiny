@@ -54,6 +54,34 @@ function(input, output, session) {
   # PKパラメータの計算
   observeEvent(input$calc_pkparam, {
     pkparam_temp(pkParam(pk(), time()))
+    
+    if(which(is.na(pkparam_temp()$kel)) |> sum() > 0){
+      
+      line_na <- which(is.na(pkparam_temp()$kel))
+      na_data <- pkparam_temp()[which(is.na(pkparam_temp()$kel)), 1:3] 
+      frag_pk <- paste0(na_data$subject, na_data$treatment)
+      
+      na_pk <- pk()[paste0(pk()$subject, pk()$treatment) %in% frag_pk,]
+      na_time <- time()[paste0(time()$subject, time()$treatment) %in% frag_pk,]
+      
+      temp_pkdf <- pkparam_temp()
+      
+      for(i in 1:nrow(na_pk)){
+        conc_na <- na_pk[i, 4:ncol(na_pk)] |> unlist() |> as.numeric()
+        time_na <- na_time[i, 4:ncol(na_time)] |> unlist() |> as.numeric()
+        ncm <- ncm_self(conc_na, time_na)
+        temp_pkdf[line_na[i], 5:15] <- ncm
+      }
+      
+      pkparam_temp(temp_pkdf)
+      
+      out_text <- paste0(na_data$subject, ", ", na_data$treatment, "はNonCompart::tblNCAで一部のパラメータがNAとなったので、別途パラメータを演算しました。データを確認してください。", collapse = " ")
+    } else {
+      out_text <- NULL
+    }
+    
+    output$na_emerge_text <- renderText(out_text)
+    
     output$pkparam_table <- DT::renderDataTable(pkparam_temp(), options = list(pageLength = 50, dom = "t"))
     
     output$pkparam_test <- DT::renderDataTable(pk_summary_treat(pkparam_temp(), "試験製剤"), options = list(pageLength = 50, dom = "t"))

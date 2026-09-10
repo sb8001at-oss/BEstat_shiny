@@ -69,6 +69,7 @@ ui <- page_sidebar(
     ),
     nav_panel(
       "PKパラメータ",
+      textOutput("na_emerge_text"),
       accordion(
         open = "各被験者のPKパラメータ",
         accordion_panel(
@@ -347,9 +348,9 @@ ui <- page_sidebar(
           ),
 
           layout_column_wrap(
-            value_box("AUC：epsilon（AUCの個体内標準偏差）", value = textOutput("AUC_ep"), theme = "primary"),
+            value_box("AUC：sigma（AUCの個体内標準偏差）", value = textOutput("AUC_ep"), theme = "primary"),
             value_box("AUC：CVw（AUCの個体内分散）", value = textOutput("AUC_CVw"), theme = "secondary"),
-            value_box("Cmax：epsilon（Cmaxの個体内標準偏差）", value = textOutput("Cmax_ep"), theme = "primary"),
+            value_box("Cmax：sigma（Cmaxの個体内標準偏差）", value = textOutput("Cmax_ep"), theme = "primary"),
             value_box("Cmax：CVw（Cmaxの個体内分散）", value = textOutput("Cmax_CVw"), theme = "secondary")
           ),
           div(p("＊被験者数は2群。値はグラフ/統計のグループの影響を受けます。epsilonは線形混合モデルの演算結果として取得。CVwはexp(epsilon^2) - 1の平方根として計算。どちらもBEの難易度を反映します。"), style = "font-size: 0.9rem;")
