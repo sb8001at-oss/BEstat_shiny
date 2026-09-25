@@ -358,6 +358,8 @@ pk_each_plot <- function(pk, time, grouping = "治験薬"){
 mmrm_f <- function(pkparam, col_name, grouping, logarithm = TRUE){
   if(grouping == "治験薬"){l <- 4} else if(grouping == "時期"){l <- 3} else if(grouping == "群"){l <- 2}
   
+  pkparam$treatment <- factor(pkparam$treatment, levels = c("標準製剤", "試験製剤"))
+  
   formulaLme <- 
     ifelse(logarithm, 
       paste("log(", col_name, ")", "~ group + period + treatment"),
@@ -413,14 +415,14 @@ conv_lme_rand_df <- function(lme_obj){
 
 # 信頼区間をデータフレームにする関数
 conv_ci_df <- function(ci_obj){
-  temp <- cbind(label = c("上側90%", "中央値", "下側90%"), (1/ci_obj) |> round(4) |> as.data.frame())
+  temp <- cbind(label = c("上側90%", "中央値", "下側90%"), ci_obj |> round(4) |> as.data.frame())
   colnames(temp) <- c("", "値")
   temp
 }
 
 # tmaxだけ違う関数が必要
 conv_ci_df_tmax <- function(ci_obj){
-  temp <- cbind(label = c("上側90%", "中央値", "下側90%"), rev(ci_obj) |> round(4) |> as.data.frame())
+  temp <- cbind(label = c("上側90%", "中央値", "下側90%"), ci_obj |> round(4) |> as.data.frame())
   colnames(temp) <- c("", "値")
   temp
 }

@@ -353,7 +353,7 @@ ui <- page_sidebar(
             value_box("Cmax：sigma（Cmaxの個体内標準偏差）", value = textOutput("Cmax_ep"), theme = "primary"),
             value_box("Cmax：CVw（Cmaxの個体内分散）", value = textOutput("Cmax_CVw"), theme = "secondary")
           ),
-          div(p("＊被験者数は2群。値はグラフ/統計のグループの影響を受けます。epsilonは線形混合モデルの演算結果として取得。CVwはexp(epsilon^2) - 1の平方根として計算。どちらもBEの難易度を反映します。"), style = "font-size: 0.9rem;")
+          div(p("＊被験者数は2群。値はグラフ/統計のグループの影響を受けます。sigmaは線形混合モデルの演算結果として取得。CVwはexp(sigma^2) - 1の平方根として計算。どちらもBEの難易度を反映します。"), style = "font-size: 0.9rem;")
         ),
         nav_panel(
           "PKパラメータのグラフ",
