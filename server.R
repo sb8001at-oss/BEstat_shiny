@@ -30,8 +30,8 @@ function(input, output, session) {
         return(0)
       }
       
-      if(pk_read$treatment |> unique() %in% c("試験製剤", "標準製剤") |> sum() != 2){
-        showNotification("製剤は2つとし，「試験製剤」，「標準製剤」の名前で設定して下さい。", duration = 5, type = "error")
+      if(pk_read$treatment |> unique() %in% c("試験製剤1", "試験製剤2", "標準製剤") |> sum() != 3){
+        showNotification("製剤は3つとし，「試験製剤1」，「試験製剤2」，「標準製剤」の名前で設定して下さい。", duration = 5, type = "error")
         return(0)
       }
       
@@ -45,7 +45,7 @@ function(input, output, session) {
   output$downloadData <- downloadHandler(
     filename = "テンプレートExcelファイル.xlsx",
     content = function(file){
-      file.copy(file.path("./", "example_excel_file.xlsx"), file)
+      file.copy(file.path("./", "example_excel_file_3x3.xlsx"), file)
     }
   )
   
@@ -146,16 +146,7 @@ function(input, output, session) {
   
   # PKの平均値をグラフにする
   observeEvent(input$plot_summary_show, {
-    output$pk_summary_plot_out <- renderPlot(
-      if(input$grouping == "時期"){
-        pk_summary_plot(pk(), time(), "時期")
-      } else if(input$grouping == "群"){
-        pk_summary_plot(pk(), time(), "群")
-      } else{
-        pk_summary_plot(pk(), time())
-      },
-      execOnResize = TRUE
-    )
+    output$pk_summary_plot_out <- renderPlot(pk_summary_plot(pk(), time()),execOnResize = TRUE)
     nav_select(id = "switcher", selected = "血漿中薬物濃度グラフ（平均±標準偏差）")
   })
   

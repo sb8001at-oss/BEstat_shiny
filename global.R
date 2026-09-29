@@ -74,8 +74,13 @@ ncm_self <- function(conc, time){
   tmax <- time[which(conc == Cmax)]
   index_tmax <- which(conc == Cmax)
   
-  conc_omitZero <- c(0, conc[conc > 0])
-  time_omitZero <- c(0, time[conc > 0])
+  if(conc[1] == 0){
+    conc_omitZero <- c(0, conc[conc > 0])
+    time_omitZero <- c(0, time[conc > 0])
+  } else {
+    conc_omitZero <- conc[conc > 0]
+    time_omitZero <- time[conc > 0]
+  }
   
   AUC <- 
     (head(conc_omitZero + conc_omitZero[-1], -1) *
@@ -591,6 +596,7 @@ prompt_text <-
   - 時間は数値で，x軸にします．時間は昇順に並べ替えてからグラフにして下さい．
   - 値は平均値_試験製剤と平均値_標準製剤の2つです．
   - エラーバーの大きさはそれぞれ標準偏差_試験製剤と標準偏差_標準製剤です．エラーバーの値を計算する必要があれば，F，G，H，I列に追記して下さい．
+  - エラーバーが重ならないよう，点とエラーバーを少し横方向にずらして表示して下さい．
   - 線の色は黒で，標準製剤は破線にして下さい．線の太さは1ptとして下さい．
   - 点は試験製剤が□，標準製剤が●とします．
   - 縦軸は血漿中未変化体濃度，横軸は投与後時間と表記して下さい．
@@ -700,7 +706,7 @@ out_excel <- function(pk, time, pkparam, n_sbj = 15){
   tmp4 <- tempfile(fileext = ".png")
   
   ggsave(filename = tmp, plot = pk_plot_ms, width = 8, height = 6, dpi = 300)
-  ggsave(filename = tmp2, plot = pk_plot_each, width = 10, height = nrow(pk)/2, dpi = 300)
+  ggsave(filename = tmp2, plot = pk_plot_each, width = 16, height = nrow(pk)/2, dpi = 300)
   ggsave(filename = tmp3, plot = p_pkparam_boxplot, width = 8, height = 8, dpi = 300)
   ggsave(filename = tmp4, plot = p_pkparam_jitter, width = 8, height = 8, dpi = 300)
   
@@ -734,7 +740,7 @@ out_excel <- function(pk, time, pkparam, n_sbj = 15){
     add_worksheet("血漿中薬物濃度グラフ（平均値）")$
     add_image("血漿中薬物濃度グラフ（平均値）", file = tmp, dims = "A1", width = 8, height = 6)$
     add_worksheet("血漿中薬物濃度グラフ（個々の被験者）")$
-    add_image("血漿中薬物濃度グラフ（個々の被験者）", file = tmp2, dims = "A1", width = 10, height = nrow(pk)/2)$
+    add_image("血漿中薬物濃度グラフ（個々の被験者）", file = tmp2, dims = "A1", width = 16, height = nrow(pk)/2)$
     add_worksheet("分散分析結果")$
     add_data("分散分析結果", "AUC", start_row = 1)$
     add_data_table("分散分析結果", mmrm_result[[1]][[1]] |> conv_lme_df(), start_row = 2)$
@@ -797,8 +803,8 @@ out_excel <- function(pk, time, pkparam, n_sbj = 15){
     add_worksheet("試験製剤・標準製剤の比")$
     add_data("試験製剤・標準製剤の比", "試験製剤/標準製剤", start_row = 1)$
     add_data_table("試験製剤・標準製剤の比", pkratio[[1]], start_row = 2)$
-    add_data("試験製剤・標準製剤の比", "要約", start_row = nrow(pk)/2 + 4)$
-    add_data_table("試験製剤・標準製剤の比", pkratio[[2]], start_row = nrow(pk)/2 + 5)$
+    add_data("試験製剤・標準製剤の比", "要約", start_row = nrow(pk)/2 |> round() + 4)$
+    add_data_table("試験製剤・標準製剤の比", pkratio[[2]], start_row = nrow(pk)/2 |> round() + 5)$
     set_col_widths("試験製剤・標準製剤の比", widths = 11, cols = 1:5)$
     add_worksheet("例数設計AUC")$
     add_data("例数設計AUC", "検出力", start_row = 1)$
