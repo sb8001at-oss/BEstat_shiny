@@ -385,9 +385,9 @@ mmrm_f <- function(pkparam, col_name, grouping, logarithm = TRUE){
   ci_vec <- c(lower = ci_lower, est = est, upper = ci_upper)
 
   if(logarithm){
-    ci_out <- exp(ci_vec)
+    ci_out <- exp(ci_vec) |> rev()
   } else {
-    ci_out <- ci_vec
+    ci_out <- ci_vec |> rev()
   }
   
   return(list(lmm_out = lmm_out, ci_out = ci_out))
@@ -596,7 +596,7 @@ prompt_text <-
   - 時間は数値で，x軸にします．時間は昇順に並べ替えてからグラフにして下さい．
   - 値は平均値_試験製剤と平均値_標準製剤の2つです．
   - エラーバーの大きさはそれぞれ標準偏差_試験製剤と標準偏差_標準製剤です．エラーバーの値を計算する必要があれば，F，G，H，I列に追記して下さい．
-  - エラーバーが重ならないよう，点とエラーバーを少し横方向にずらして表示して下さい．
+  - エラーバーが重ならないように、点とエラーバーは少しだけずらして表示してください。
   - 線の色は黒で，標準製剤は破線にして下さい．線の太さは1ptとして下さい．
   - 点は試験製剤が□，標準製剤が●とします．
   - 縦軸は血漿中未変化体濃度，横軸は投与後時間と表記して下さい．
@@ -803,8 +803,8 @@ out_excel <- function(pk, time, pkparam, n_sbj = 15){
     add_worksheet("試験製剤・標準製剤の比")$
     add_data("試験製剤・標準製剤の比", "試験製剤/標準製剤", start_row = 1)$
     add_data_table("試験製剤・標準製剤の比", pkratio[[1]], start_row = 2)$
-    add_data("試験製剤・標準製剤の比", "要約", start_row = nrow(pk)/2 |> round() + 4)$
-    add_data_table("試験製剤・標準製剤の比", pkratio[[2]], start_row = nrow(pk)/2 |> round() + 5)$
+    add_data("試験製剤・標準製剤の比", "要約", start_row = nrow(pk)/2 + 4)$
+    add_data_table("試験製剤・標準製剤の比", pkratio[[2]], start_row = nrow(pk)/2 + 5)$
     set_col_widths("試験製剤・標準製剤の比", widths = 11, cols = 1:5)$
     add_worksheet("例数設計AUC")$
     add_data("例数設計AUC", "検出力", start_row = 1)$

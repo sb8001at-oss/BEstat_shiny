@@ -50,6 +50,7 @@ ui <- page_sidebar(
     uiOutput("normalityButton"),
     uiOutput("pkGraphButton"),
     uiOutput("samplesizeNinput"),
+    selectInput("grouping", "グラフ/統計のグループ", choices = c("治験薬", "時期", "群"), selected = "治験薬"),
     card(
       card_header("結果をExcelに出力"),
       uiOutput("Excelfilename"),
