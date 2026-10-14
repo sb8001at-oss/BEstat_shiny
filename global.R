@@ -688,14 +688,14 @@ out_excel <- function(pk, time, pkparam, n_sbj = 15){
   
   # 信頼区間をデータフレームにする関数（空の要素を認めてくれないので追加）
   conv_ci_df2 <- function(ci_obj){
-    temp <- cbind(label = c("上側90%", "中央値", "下側90%"), (1/ci_obj) |> as.data.frame())
+    temp <- cbind(label = c("下側90%", "中央値", "上側90%"), ci_obj |> as.data.frame())
     colnames(temp) <- c("範囲", "値")
     temp
   }
   
   # tmaxだけ違う関数が必要（空の要素を認めてくれないので追加）
   conv_ci_df_tmax2 <- function(ci_obj){
-    temp <- cbind(label = c("上側90%", "中央値", "下側90%"), rev(ci_obj) |> as.data.frame())
+    temp <- cbind(label = c("下側90%", "中央値", "上側90%"), ci_obj |> as.data.frame())
     colnames(temp) <- c("範囲", "値")
     temp
   }
